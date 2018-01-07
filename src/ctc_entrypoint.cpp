@@ -51,11 +51,13 @@ ctcStatus_t compute_ctc_loss(const float* const activations,
         flat_labels == nullptr ||
         label_lengths == nullptr ||
         input_lengths == nullptr ||
-        costs == nullptr ||
+        (costs == nullptr && !options.skip_copy_costs_to_cpu) ||
         workspace == nullptr ||
         alphabet_size <= 0 ||
-        minibatch <= 0)
+        minibatch <= 0) {
+        std::cerr << "Invalid parameter" << std::endl;
         return CTC_STATUS_INVALID_VALUE;
+    }
 
     if (options.loc == CTC_CPU) {
         CpuCTC<float> ctc(alphabet_size, minibatch, workspace, options.num_threads,
@@ -72,7 +74,7 @@ ctcStatus_t compute_ctc_loss(const float* const activations,
     } else if (options.loc == CTC_GPU) {
 #ifdef __CUDACC__
         GpuCTC<float> ctc(alphabet_size, minibatch, workspace, options.stream,
-                          options.blank_label);
+                          options.blank_label, options.skip_copy_costs_to_cpu);
 
         if (gradients != NULL)
             return ctc.cost_and_grad(activations, gradients, costs,

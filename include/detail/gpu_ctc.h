@@ -11,10 +11,12 @@ class GpuCTC {
                int minibatch,
                void *workspace,
                CUstream stream,
-               int blank_label) :
+               int blank_label,
+	       bool skip_copy_costs_to_cpu) :
             out_dim_(alphabet_size), minibatch_(minibatch),
             gpu_workspace_(workspace), stream_(stream),
-            blank_label_(blank_label) {};
+            blank_label_(blank_label),
+	    skip_copy_costs_to_cpu_(skip_copy_costs_to_cpu) {};
 
         // Noncopyable
         GpuCTC(const GpuCTC&) = delete;
@@ -85,6 +87,7 @@ class GpuCTC {
 
         CUstream stream_;
         int blank_label_;
+        bool skip_copy_costs_to_cpu_;
 
         void *gpu_workspace_; // Buffer for all temporary GPU memory
         int *utt_length_; // T
@@ -425,9 +428,10 @@ GpuCTC<ProbT>::compute_cost_and_score(const ProbT* const activations,
                        compute_alpha, compute_betas_and_grad);
 
     cudaError_t cuda_status_mem, cuda_status_sync;
-    cuda_status_mem = cudaMemcpyAsync(costs, nll_forward_,
-                                      sizeof(ProbT) * minibatch_,
-                                      cudaMemcpyDeviceToHost, stream_);
+    cuda_status_mem = skip_copy_costs_to_cpu_ ? cudaSuccess :
+      cudaMemcpyAsync(costs, nll_forward_,
+		      sizeof(ProbT) * minibatch_,
+		      cudaMemcpyDeviceToHost, stream_);
     cuda_status_sync = cudaStreamSynchronize(stream_);
     if (cuda_status_mem != cudaSuccess || cuda_status_sync != cudaSuccess)
         return CTC_STATUS_MEMOPS_FAILED;
@@ -445,12 +449,14 @@ GpuCTC<ProbT>::cost_and_grad(const ProbT* const activations,
                              const int* const input_lengths) {
     if (activations == nullptr ||
         grads == nullptr ||
-        costs == nullptr ||
+        (costs == nullptr && !skip_copy_costs_to_cpu_) ||
         flat_labels == nullptr ||
         label_lengths == nullptr ||
         input_lengths == nullptr
-        )
+      ) {
+        std::cerr << "cost_and_grad error" << std::endl;
         return CTC_STATUS_INVALID_VALUE;
+    }
 
     return compute_cost_and_score(activations, grads, costs, flat_labels,
                                   label_lengths, input_lengths, true, true);
@@ -468,8 +474,10 @@ GpuCTC<ProbT>::score_forward(const ProbT* const activations,
         flat_labels == nullptr ||
         label_lengths == nullptr ||
         input_lengths == nullptr
-        )
-        return CTC_STATUS_INVALID_VALUE;
+      ) {
+      std::cerr << "score_forward error" << std::endl;
+      return CTC_STATUS_INVALID_VALUE;
+    }
 
     return compute_cost_and_score(activations, nullptr, costs, flat_labels,
                                   label_lengths, input_lengths, true, false);

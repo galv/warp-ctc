@@ -53,6 +53,7 @@ struct ctcOptions {
 
     /// the label value/index that the CTC calculation should use as the blank label
     int blank_label;
+    bool skip_copy_costs_to_cpu;
 };
 
 /** Compute the connectionist temporal classification loss between a sequence
