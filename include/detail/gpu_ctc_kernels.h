@@ -86,11 +86,11 @@ struct CTASegReduce {
 // than the labels. This is much more true for Mandarin than English.
 template<typename ProbT, int NT, int VT>
 __global__
-void compute_alpha_kernel (const ProbT* probs, const int *label_sizes,
-                           const int *utt_length, const int *repeats_in_labels,
-                           const int *labels_without_blanks, const int *label_offsets, 
-                           int *labels_with_blanks, ProbT *alphas, 
-                           ProbT* nll_forward, int stride, int out_dim,
+void compute_alpha_kernel (const ProbT* __restrict__ probs, const int * __restrict__ label_sizes,
+                           const int * __restrict__ utt_length, const int * __restrict__ repeats_in_labels,
+                           const int * __restrict__ labels_without_blanks, const int * __restrict__ label_offsets, 
+                           int * __restrict__ labels_with_blanks, ProbT * __restrict__ alphas,
+                           ProbT* __restrict__ nll_forward, int stride, int out_dim,
                            int S_memoffset, int T_memoffset, int blank_label) {
 
     ctc_helper::log_plus<ProbT> log_plus_f;
@@ -217,11 +217,11 @@ void compute_alpha_kernel (const ProbT* probs, const int *label_sizes,
 // See comments above compute_alphas for more context.
 template<typename ProbT, int NT, int VT>
 __global__
-void compute_betas_and_grad_kernel (const ProbT* probs, const int *label_sizes,
-                                    const int *utt_length, const int *repeats_in_labels,
-                                    const int *labels_with_blanks, ProbT *alphas,
-                                    const ProbT* nll_forward, ProbT *nll_backward,
-                                    ProbT *grads, int stride, int out_dim,
+void compute_betas_and_grad_kernel (const ProbT* __restrict__ probs, const int * __restrict__ label_sizes,
+                                    const int * __restrict__ utt_length, const int * __restrict__ repeats_in_labels,
+                                    const int * __restrict__ labels_with_blanks, ProbT * __restrict__ alphas,
+                                    const ProbT* __restrict__  nll_forward, ProbT * __restrict__ nll_backward,
+                                    ProbT * __restrict__ grads, int stride, int out_dim,
                                     int S_memoffset, int T_memoffset, int blank_label) {
 
     ctc_helper::log_plus<ProbT> log_plus_f;
